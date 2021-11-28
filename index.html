@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+        <style>
+            html, body {
+            height: 100%
+            }
+            
+            body {
+            margin: 0
+            }
+            
+            
+            #webchat {
+            height: 100%;
+            width: 70%;
+            }
+            </style>
+    </head>
+   <body>
+      <div id="webchat" role="main"></div>
+      <script>
+    function createFetchSpeechServicesCredentials() {
+        let expireAfter = 0;
+        let lastPromise;
+
+        return () => {
+          const now = Date.now();
+
+          if (now > expireAfter) {
+            expireAfter = now + 300000;
+            lastPromise = fetch('https://webchat-mockbot.azurewebsites.net/speechservices/token', {
+              method: 'POST'
+            }).then(
+              res => res.json(),
+              err => {
+                expireAfter = 0;
+
+                return Promise.reject(err);
+              }
+            );
+          }
+
+          return lastPromise;
+        };
+      }       
+
+      const fetchSpeechServicesCredentials = createFetchSpeechServicesCredentials();   
+
+        (async function () 
+        {
+            var speechServicesTokenRes = await fetch('https://centralus.api.cognitive.microsoft.com/sts/v1.0/issuetoken',
+                { 
+                    method: 'POST', 
+                    headers: 
+                    { 
+                    //Keys the cognitive service
+                        'Ocp-Apim-Subscription-Key': '57ef613ab5c545a498487aadbc720584'
+                    } 
+                }
+            );
+
+            if (speechServicesTokenRes.status === 200) 
+            {
+                authorizationToken = await speechServicesTokenRes.text();
+                
+                var webSpeechPonyfillFactory = await window.WebChat.createCognitiveServicesSpeechServicesPonyfillFactory(
+                {
+                    credentials: fetchSpeechServicesCredentials,
+                    region: 'southcentralus'
+                });
+
+                // Set style options.
+                const styleOptions = {
+                            botAvatarInitials: 'BF',
+                            userAvatarInitials: 'WC'
+                        };
+
+                window.WebChat.renderWebChat(
+                {
+                    directLine: createDirectLine(
+                        {
+                            //Direct line secret
+                            secret: 'o9aUonnh0io.4tlF720nRAoJ-utCCtS_kXfQOVYh-Qte7rZxeUYi1bA'
+                        }),
+                        username: 'Web Chat User',
+                        webSpeechPonyfillFactory: webSpeechPonyfillFactory,
+                        locale: 'es-MX',
+                }, 
+                document.getElementById('webchat'));
+            }
+        })().catch(err => console.error(err));
+
+    </script>
+
+   </body>
+</html>
